@@ -193,7 +193,7 @@ const FormItem: React.FC<FormItemProps> = (props: FormItemProps) => {
         }
 
         return (
-          <Row type="flex" className={classNames(itemClassName)} style={style} key="row">
+          <Row className={classNames(itemClassName)} style={style} key="row">
             {/* Label */}
             <FormItemLabel
               htmlFor={fieldId}
