@@ -1,8 +1,9 @@
 ---
-order: 6
+order: 99
 title:
   zh-CN: 自定义日期范围选择
   en-US: Customized Range Picker
+debug: true
 ---
 
 ## zh-CN
@@ -72,7 +73,7 @@ class DateRange extends React.Component {
   render() {
     const { startValue, endValue, endOpen } = this.state;
     return (
-      <div>
+      <>
         <DatePicker
           disabledDate={this.disabledStartDate}
           showTime
@@ -92,7 +93,7 @@ class DateRange extends React.Component {
           open={endOpen}
           onOpenChange={this.handleEndOpenChange}
         />
-      </div>
+      </>
     );
   }
 }

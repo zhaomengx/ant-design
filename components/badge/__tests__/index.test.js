@@ -3,9 +3,18 @@ import { mount, render } from 'enzyme';
 import Badge from '../index';
 import Tooltip from '../../tooltip';
 import mountTest from '../../../tests/shared/mountTest';
+import rtlTest from '../../../tests/shared/rtlTest';
 
 describe('Badge', () => {
   mountTest(Badge);
+  rtlTest(Badge);
+  rtlTest(() => (
+    <Badge count={5} offset={[10, 10]}>
+      <a href="#" className="head-example">
+        head
+      </a>
+    </Badge>
+  ));
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -25,6 +34,7 @@ describe('Badge', () => {
     expect(wrapper).toMatchSnapshot();
     wrapper = mount(<Badge count="3.5" />);
     expect(wrapper).toMatchSnapshot();
+    expect(() => wrapper.unmount()).not.toThrow();
   });
 
   it('badge dot not showing count == 0', () => {
@@ -35,23 +45,21 @@ describe('Badge', () => {
   it('should have an overriden title attribute', () => {
     const badge = mount(<Badge count={10} title="Custom title" />);
     expect(
-      badge
-        .find('.ant-scroll-number')
-        .getDOMNode()
-        .attributes.getNamedItem('title').value,
+      badge.find('.ant-scroll-number').getDOMNode().attributes.getNamedItem('title').value,
     ).toEqual('Custom title');
   });
 
   // https://github.com/ant-design/ant-design/issues/10626
   it('should be composable with Tooltip', () => {
+    const ref = React.createRef();
     const wrapper = mount(
-      <Tooltip title="Fix the error">
+      <Tooltip title="Fix the error" ref={ref}>
         <Badge status="error" />
       </Tooltip>,
     );
     wrapper.find('Badge').simulate('mouseenter');
     jest.runAllTimers();
-    expect(wrapper.instance().tooltip.props.visible).toBe(true);
+    expect(ref.current.props.visible).toBe(true);
   });
 
   it('should render when count is changed', () => {
@@ -63,6 +71,9 @@ describe('Badge', () => {
     jest.runAllTimers();
     expect(wrapper).toMatchSnapshot();
     wrapper.setProps({ count: 11 });
+    jest.runAllTimers();
+    expect(wrapper).toMatchSnapshot();
+    wrapper.setProps({ count: 111 });
     jest.runAllTimers();
     expect(wrapper).toMatchSnapshot();
     wrapper.setProps({ count: 10 });
@@ -108,6 +119,24 @@ describe('Badge', () => {
         <Badge count="-10" />
         <Badge count={-10} />
       </div>,
+    );
+    expect(wrapper).toMatchSnapshot();
+  });
+
+  // https://github.com/ant-design/ant-design/issues/21331
+  it('render Badge status/color when contains children', () => {
+    const wrapper = render(
+      <>
+        <Badge count={5} status="success">
+          <a />
+        </Badge>
+        <Badge count={5} color="blue">
+          <a />
+        </Badge>
+        <Badge count={5} color="#08c">
+          <a />
+        </Badge>
+      </>,
     );
     expect(wrapper).toMatchSnapshot();
   });

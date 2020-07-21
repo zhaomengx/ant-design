@@ -19,7 +19,7 @@ import { DatePicker } from 'antd';
 const { RangePicker } = DatePicker;
 
 ReactDOM.render(
-  <div>
+  <>
     <DatePicker
       dateRender={current => {
         const style = {};
@@ -28,7 +28,7 @@ ReactDOM.render(
           style.borderRadius = '50%';
         }
         return (
-          <div className="ant-calendar-date" style={style}>
+          <div className="ant-picker-cell-inner" style={style}>
             {current.date()}
           </div>
         );
@@ -42,13 +42,13 @@ ReactDOM.render(
           style.borderRadius = '50%';
         }
         return (
-          <div className="ant-calendar-date" style={style}>
+          <div className="ant-picker-cell-inner" style={style}>
             {current.date()}
           </div>
         );
       }}
     />
-  </div>,
+  </>,
   mountNode,
 );
 ```

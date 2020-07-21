@@ -1,18 +1,11 @@
 import * as React from 'react';
-import { polyfill } from 'react-lifecycles-compat';
+import RcTextArea, { TextAreaProps as RcTextAreaProps, ResizableTextArea } from 'rc-textarea';
+import omit from 'omit.js';
 import ClearableLabeledInput from './ClearableLabeledInput';
-import ResizableTextArea, { AutoSizeType } from './ResizableTextArea';
 import { ConfigConsumer, ConfigConsumerProps } from '../config-provider';
 import { fixControlledValue, resolveOnChange } from './Input';
 
-export type HTMLTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
-
-export interface TextAreaProps extends HTMLTextareaProps {
-  prefixCls?: string;
-  /* deprecated, use autoSize instead */
-  autosize?: boolean | AutoSizeType;
-  autoSize?: boolean | AutoSizeType;
-  onPressEnter?: React.KeyboardEventHandler<HTMLTextAreaElement>;
+export interface TextAreaProps extends RcTextAreaProps {
   allowClear?: boolean;
 }
 
@@ -48,16 +41,16 @@ class TextArea extends React.Component<TextAreaProps, TextAreaState> {
     }
   }
 
-  focus() {
+  focus = () => {
     this.resizableTextArea.textArea.focus();
-  }
+  };
 
   blur() {
     this.resizableTextArea.textArea.blur();
   }
 
-  saveTextArea = (resizableTextArea: ResizableTextArea) => {
-    this.resizableTextArea = resizableTextArea;
+  saveTextArea = (textarea: RcTextArea) => {
+    this.resizableTextArea = textarea?.resizableTextArea;
   };
 
   saveClearableInput = (clearableInput: ClearableLabeledInput) => {
@@ -65,25 +58,12 @@ class TextArea extends React.Component<TextAreaProps, TextAreaState> {
   };
 
   handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    this.setValue(e.target.value, () => {
-      this.resizableTextArea.resizeTextarea();
-    });
+    this.setValue(e.target.value);
     resolveOnChange(this.resizableTextArea.textArea, e, this.props.onChange);
-  };
-
-  handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const { onPressEnter, onKeyDown } = this.props;
-    if (e.keyCode === 13 && onPressEnter) {
-      onPressEnter(e);
-    }
-    if (onKeyDown) {
-      onKeyDown(e);
-    }
   };
 
   handleReset = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     this.setValue('', () => {
-      this.resizableTextArea.renderTextArea();
       this.focus();
     });
     resolveOnChange(this.resizableTextArea.textArea, e, this.props.onChange);
@@ -91,17 +71,16 @@ class TextArea extends React.Component<TextAreaProps, TextAreaState> {
 
   renderTextArea = (prefixCls: string) => {
     return (
-      <ResizableTextArea
-        {...this.props}
+      <RcTextArea
+        {...omit(this.props, ['allowClear'])}
         prefixCls={prefixCls}
-        onKeyDown={this.handleKeyDown}
         onChange={this.handleChange}
         ref={this.saveTextArea}
       />
     );
   };
 
-  renderComponent = ({ getPrefixCls }: ConfigConsumerProps) => {
+  renderComponent = ({ getPrefixCls, direction }: ConfigConsumerProps) => {
     const { value } = this.state;
     const { prefixCls: customizePrefixCls } = this.props;
     const prefixCls = getPrefixCls('input', customizePrefixCls);
@@ -109,11 +88,13 @@ class TextArea extends React.Component<TextAreaProps, TextAreaState> {
       <ClearableLabeledInput
         {...this.props}
         prefixCls={prefixCls}
+        direction={direction}
         inputType="text"
         value={fixControlledValue(value)}
         element={this.renderTextArea(prefixCls)}
         handleReset={this.handleReset}
         ref={this.saveClearableInput}
+        triggerFocus={this.focus}
       />
     );
   };
@@ -122,7 +103,5 @@ class TextArea extends React.Component<TextAreaProps, TextAreaState> {
     return <ConfigConsumer>{this.renderComponent}</ConfigConsumer>;
   }
 }
-
-polyfill(TextArea);
 
 export default TextArea;

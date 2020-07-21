@@ -1,6 +1,6 @@
 import React from 'react';
 import { mount } from 'enzyme';
-import mountTest from '../../../tests/shared/mountTest';
+import { sleep } from '../../../tests/utils';
 
 describe('Collapse', () => {
   // Fix css-animation deps on these
@@ -16,7 +16,6 @@ describe('Collapse', () => {
 
   // eslint-disable-next-line global-require
   const Collapse = require('..').default;
-  mountTest(Collapse);
 
   it('should support remove expandIcon', () => {
     const wrapper = mount(
@@ -53,8 +52,7 @@ describe('Collapse', () => {
     expect(wrapper.render()).toMatchSnapshot();
   });
 
-  it('could be expand and collapse', () => {
-    jest.useFakeTimers();
+  it('could be expand and collapse', async () => {
     const wrapper = mount(
       <Collapse>
         <Collapse.Panel header="This is panel header 1" key="1">
@@ -63,13 +61,22 @@ describe('Collapse', () => {
       </Collapse>,
     );
     expect(wrapper.find('.ant-collapse-item').hasClass('ant-collapse-item-active')).toBe(false);
-    wrapper
-      .find('.ant-collapse-header')
-      .at(0)
-      .simulate('click');
+    wrapper.find('.ant-collapse-header').at(0).simulate('click');
+    wrapper.update();
+    await sleep(400);
+    wrapper.update();
     expect(wrapper.find('.ant-collapse-item').hasClass('ant-collapse-item-active')).toBe(true);
-    jest.runAllTimers();
-    expect(wrapper.find('.ant-collapse-item').hasClass('ant-collapse-item-active')).toBe(true);
-    jest.useRealTimers();
+  });
+
+  it('could override default openAnimation', () => {
+    const wrapper = mount(
+      <Collapse openAnimation={{}}>
+        <Collapse.Panel header="This is panel header 1" key="1">
+          content
+        </Collapse.Panel>
+      </Collapse>,
+    );
+    wrapper.find('.ant-collapse-header').at(0).simulate('click');
+    expect(wrapper.render()).toMatchSnapshot();
   });
 });

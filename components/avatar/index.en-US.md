@@ -2,6 +2,7 @@
 category: Components
 type: Data Display
 title: Avatar
+cover: https://gw.alipayobjects.com/zos/antfincdn/aBcnbw68hP/Avatar.svg
 ---
 
 Avatars can be used to represent people or objects. It supports images, `Icon`s, or letters.
@@ -10,10 +11,13 @@ Avatars can be used to represent people or objects. It supports images, `Icon`s,
 
 | Property | Description | Type | Default | Version |
 | --- | --- | --- | --- | --- |
-| icon | the `Icon` type for an icon avatar, see `Icon` Component or use ReactNode | string \| ReactNode | - |  |
-| shape | the shape of avatar | `circle` \| `square` | `circle` |  |
-| size | the size of the avatar | number \| string: `large` `small` `default` | `default` |  |
-| src | the address of the image for an image avatar | string | - |  |
-| srcSet | a list of sources to use for different screen resolutions | string | - | 3.11.0 |
-| alt | This attribute defines the alternative text describing the image | string | - | 3.7.0 |
-| onError | handler when img load error, return false to prevent default fallback behavior | () => boolean | - | 3.8.0 |
+| icon | Custom icon type for an icon avatar | ReactNode | - |  |
+| shape | The shape of avatar | `circle` \| `square` | `circle` |  |
+| size | The size of the avatar | number \| `large` \| `small` \| `default` | `default` |  |
+| src | The address of the image for an image avatar | string | - |  |
+| srcSet | A list of sources to use for different screen resolutions | string | - |  |
+| alt | This attribute defines the alternative text describing the image | string | - |  |
+| onError | Handler when img load error, return false to prevent default fallback behavior | () => boolean | - |  |
+| gap | Letter type unit distance between left and right sides | number | 4 | 4.3.0 |
+
+> Tip: You can set `icon` or `children` as the fallback for image load error, with the priority of `icon` > `children`

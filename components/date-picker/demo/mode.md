@@ -1,8 +1,9 @@
 ---
-order: 11
+order: 99
 title:
   zh-CN: 受控面板
   en-US: Controlled Panels
+debug: true
 ---
 
 ## zh-CN
@@ -76,11 +77,11 @@ class ControlledRangePicker extends React.Component {
 }
 
 ReactDOM.render(
-  <div>
+  <>
     <ControlledDatePicker />
     <br />
     <ControlledRangePicker />
-  </div>,
+  </>,
   mountNode,
 );
 ```

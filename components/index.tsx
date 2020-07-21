@@ -66,7 +66,7 @@ export { default as Empty } from './empty';
 
 export { default as Form } from './form';
 
-export { default as Icon } from './icon';
+export { default as Grid } from './grid';
 
 export { default as Input } from './input';
 
@@ -75,8 +75,6 @@ export { default as InputNumber } from './input-number';
 export { default as Layout } from './layout';
 
 export { default as List } from './list';
-
-export { default as LocaleProvider } from './locale-provider';
 
 export { default as message } from './message';
 
@@ -114,6 +112,8 @@ export { default as Skeleton } from './skeleton';
 
 export { default as Slider } from './slider';
 
+export { default as Space } from './space';
+
 export { default as Spin } from './spin';
 
 export { default as Steps } from './steps';
@@ -139,8 +139,6 @@ export { default as Timeline } from './timeline';
 export { default as Tooltip } from './tooltip';
 
 export { default as Typography } from './typography';
-
-export { default as Mention } from './mention';
 
 export { default as Upload } from './upload';
 

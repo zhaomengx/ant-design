@@ -1,23 +1,46 @@
 import * as React from 'react';
-import * as PropTypes from 'prop-types';
-import { polyfill } from 'react-lifecycles-compat';
 import classNames from 'classnames';
 import omit from 'omit.js';
 import Group from './Group';
 import Search from './Search';
 import TextArea from './TextArea';
 import Password from './Password';
-import { Omit, tuple } from '../_util/type';
+import { Omit, LiteralUnion } from '../_util/type';
 import ClearableLabeledInput, { hasPrefixSuffix } from './ClearableLabeledInput';
 import { ConfigConsumer, ConfigConsumerProps } from '../config-provider';
-import warning from '../_util/warning';
-
-export const InputSizes = tuple('small', 'default', 'large');
+import SizeContext, { SizeType } from '../config-provider/SizeContext';
+import devWarning from '../_util/devWarning';
 
 export interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix' | 'type'> {
   prefixCls?: string;
-  size?: (typeof InputSizes)[number];
+  size?: SizeType;
+  // ref: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#%3Cinput%3E_types
+  type?: LiteralUnion<
+    | 'button'
+    | 'checkbox'
+    | 'color'
+    | 'date'
+    | 'datetime-local'
+    | 'email'
+    | 'file'
+    | 'hidden'
+    | 'image'
+    | 'month'
+    | 'number'
+    | 'password'
+    | 'radio'
+    | 'range'
+    | 'reset'
+    | 'search'
+    | 'submit'
+    | 'tel'
+    | 'text'
+    | 'time'
+    | 'url'
+    | 'week',
+    string
+  >;
   onPressEnter?: React.KeyboardEventHandler<HTMLInputElement>;
   addonBefore?: React.ReactNode;
   addonAfter?: React.ReactNode;
@@ -61,18 +84,23 @@ export function resolveOnChange(
 
 export function getInputClassName(
   prefixCls: string,
-  size?: (typeof InputSizes)[number],
+  size?: SizeType,
   disabled?: boolean,
+  direction?: any,
 ) {
   return classNames(prefixCls, {
     [`${prefixCls}-sm`]: size === 'small',
     [`${prefixCls}-lg`]: size === 'large',
     [`${prefixCls}-disabled`]: disabled,
+    [`${prefixCls}-rtl`]: direction === 'rtl',
   });
 }
 
 export interface InputState {
   value: any;
+  focused: boolean;
+  /** `value` from prev props */
+  prevValue: any;
 }
 
 class Input extends React.Component<InputProps, InputState> {
@@ -88,47 +116,35 @@ class Input extends React.Component<InputProps, InputState> {
     type: 'text',
   };
 
-  static propTypes = {
-    type: PropTypes.string,
-    id: PropTypes.string,
-    size: PropTypes.oneOf(InputSizes),
-    maxLength: PropTypes.number,
-    disabled: PropTypes.bool,
-    value: PropTypes.any,
-    defaultValue: PropTypes.any,
-    className: PropTypes.string,
-    addonBefore: PropTypes.node,
-    addonAfter: PropTypes.node,
-    prefixCls: PropTypes.string,
-    onPressEnter: PropTypes.func,
-    onKeyDown: PropTypes.func,
-    onKeyUp: PropTypes.func,
-    onFocus: PropTypes.func,
-    onBlur: PropTypes.func,
-    prefix: PropTypes.node,
-    suffix: PropTypes.node,
-    allowClear: PropTypes.bool,
-  };
-
   input: HTMLInputElement;
 
   clearableInput: ClearableLabeledInput;
+
+  removePasswordTimeout: number;
+
+  direction: any = 'ltr';
 
   constructor(props: InputProps) {
     super(props);
     const value = typeof props.value === 'undefined' ? props.defaultValue : props.value;
     this.state = {
       value,
+      focused: false,
+      // eslint-disable-next-line react/no-unused-state
+      prevValue: props.value,
     };
   }
 
-  static getDerivedStateFromProps(nextProps: InputProps) {
-    if ('value' in nextProps) {
-      return {
-        value: nextProps.value,
-      };
+  static getDerivedStateFromProps(nextProps: InputProps, { prevValue }: InputState) {
+    const newState: Partial<InputState> = { prevValue: nextProps.value };
+    if (nextProps.value !== undefined || prevValue !== nextProps.value) {
+      newState.value = nextProps.value;
     }
-    return null;
+    return newState;
+  }
+
+  componentDidMount() {
+    this.clearPasswordValueAttribute();
   }
 
   // Since polyfill `getSnapshotBeforeUpdate` need work with `componentDidUpdate`.
@@ -137,7 +153,7 @@ class Input extends React.Component<InputProps, InputState> {
 
   getSnapshotBeforeUpdate(prevProps: InputProps) {
     if (hasPrefixSuffix(prevProps) !== hasPrefixSuffix(this.props)) {
-      warning(
+      devWarning(
         this.input !== document.activeElement,
         'Input',
         `When Input is focused, dynamic add or remove prefix / suffix will make it lose focus caused by dom structure change. Read more: https://ant.design/components/input/#FAQ`,
@@ -146,9 +162,15 @@ class Input extends React.Component<InputProps, InputState> {
     return null;
   }
 
-  focus() {
-    this.input.focus();
+  componentWillUnmount() {
+    if (this.removePasswordTimeout) {
+      clearTimeout(this.removePasswordTimeout);
+    }
   }
+
+  focus = () => {
+    this.input.focus();
+  };
 
   blur() {
     this.input.blur();
@@ -166,8 +188,24 @@ class Input extends React.Component<InputProps, InputState> {
     this.input = input;
   };
 
+  onFocus: React.FocusEventHandler<HTMLInputElement> = e => {
+    const { onFocus } = this.props;
+    this.setState({ focused: true }, this.clearPasswordValueAttribute);
+    if (onFocus) {
+      onFocus(e);
+    }
+  };
+
+  onBlur: React.FocusEventHandler<HTMLInputElement> = e => {
+    const { onBlur } = this.props;
+    this.setState({ focused: false }, this.clearPasswordValueAttribute);
+    if (onBlur) {
+      onBlur(e);
+    }
+  };
+
   setValue(value: string, callback?: () => void) {
-    if (!('value' in this.props)) {
+    if (this.props.value === undefined) {
       this.setState({ value }, callback);
     }
   }
@@ -179,8 +217,12 @@ class Input extends React.Component<InputProps, InputState> {
     resolveOnChange(this.input, e, this.props.onChange);
   };
 
-  renderInput = (prefixCls: string) => {
-    const { className, addonBefore, addonAfter, size, disabled } = this.props;
+  renderInput = (
+    prefixCls: string,
+    size: SizeType | undefined,
+    input: ConfigConsumerProps['input'] = {},
+  ) => {
+    const { className, addonBefore, addonAfter, size: customizeSize, disabled } = this.props;
     // Fix https://fb.me/react-unknown-prop
     const otherProps = omit(this.props, [
       'prefixCls',
@@ -198,19 +240,38 @@ class Input extends React.Component<InputProps, InputState> {
     ]);
     return (
       <input
+        autoComplete={input.autoComplete}
         {...otherProps}
         onChange={this.handleChange}
+        onFocus={this.onFocus}
+        onBlur={this.onBlur}
         onKeyDown={this.handleKeyDown}
-        className={classNames(getInputClassName(prefixCls, size, disabled), {
-          [className!]: className && !addonBefore && !addonAfter,
-        })}
+        className={classNames(
+          getInputClassName(prefixCls, customizeSize || size, disabled, this.direction),
+          {
+            [className!]: className && !addonBefore && !addonAfter,
+          },
+        )}
         ref={this.saveInput}
       />
     );
   };
 
+  clearPasswordValueAttribute = () => {
+    // https://github.com/ant-design/ant-design/issues/20541
+    this.removePasswordTimeout = setTimeout(() => {
+      if (
+        this.input &&
+        this.input.getAttribute('type') === 'password' &&
+        this.input.hasAttribute('value')
+      ) {
+        this.input.removeAttribute('value');
+      }
+    });
+  };
+
   handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    this.setValue(e.target.value);
+    this.setValue(e.target.value, this.clearPasswordValueAttribute);
     resolveOnChange(this.input, e, this.props.onChange);
   };
 
@@ -224,20 +285,30 @@ class Input extends React.Component<InputProps, InputState> {
     }
   };
 
-  renderComponent = ({ getPrefixCls }: ConfigConsumerProps) => {
-    const { value } = this.state;
+  renderComponent = ({ getPrefixCls, direction, input }: ConfigConsumerProps) => {
+    const { value, focused } = this.state;
     const { prefixCls: customizePrefixCls } = this.props;
     const prefixCls = getPrefixCls('input', customizePrefixCls);
+    this.direction = direction;
+
     return (
-      <ClearableLabeledInput
-        {...this.props}
-        prefixCls={prefixCls}
-        inputType="input"
-        value={fixControlledValue(value)}
-        element={this.renderInput(prefixCls)}
-        handleReset={this.handleReset}
-        ref={this.saveClearableInput}
-      />
+      <SizeContext.Consumer>
+        {size => (
+          <ClearableLabeledInput
+            size={size}
+            {...this.props}
+            prefixCls={prefixCls}
+            inputType="input"
+            value={fixControlledValue(value)}
+            element={this.renderInput(prefixCls, size, input)}
+            handleReset={this.handleReset}
+            ref={this.saveClearableInput}
+            direction={direction}
+            focused={focused}
+            triggerFocus={this.focus}
+          />
+        )}
+      </SizeContext.Consumer>
     );
   };
 
@@ -245,7 +316,5 @@ class Input extends React.Component<InputProps, InputState> {
     return <ConfigConsumer>{this.renderComponent}</ConfigConsumer>;
   }
 }
-
-polyfill(Input);
 
 export default Input;

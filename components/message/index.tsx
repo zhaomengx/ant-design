@@ -1,6 +1,11 @@
 import * as React from 'react';
+import classNames from 'classnames';
 import Notification from 'rc-notification';
-import Icon from '../icon';
+import LoadingOutlined from '@ant-design/icons/LoadingOutlined';
+import ExclamationCircleFilled from '@ant-design/icons/ExclamationCircleFilled';
+import CloseCircleFilled from '@ant-design/icons/CloseCircleFilled';
+import CheckCircleFilled from '@ant-design/icons/CheckCircleFilled';
+import InfoCircleFilled from '@ant-design/icons/InfoCircleFilled';
 
 let defaultDuration = 3;
 let defaultTop: number;
@@ -10,6 +15,7 @@ let prefixCls = 'ant-message';
 let transitionName = 'move-up';
 let getContainer: () => HTMLElement;
 let maxCount: number;
+let rtl = false;
 
 function getMessageInstance(callback: (i: any) => void) {
   if (messageInstance) {
@@ -54,19 +60,28 @@ export interface ArgsProps {
   onClose?: () => void;
   icon?: React.ReactNode;
   key?: string | number;
+  style?: React.CSSProperties;
+  className?: string;
 }
+
+const iconMap = {
+  info: InfoCircleFilled,
+  success: CheckCircleFilled,
+  error: CloseCircleFilled,
+  warning: ExclamationCircleFilled,
+  loading: LoadingOutlined,
+};
 
 function notice(args: ArgsProps): MessageType {
   const duration = args.duration !== undefined ? args.duration : defaultDuration;
-  const iconType = {
-    info: 'info-circle',
-    success: 'check-circle',
-    error: 'close-circle',
-    warning: 'exclamation-circle',
-    loading: 'loading',
-  }[args.type];
+  const IconComponent = iconMap[args.type];
 
-  const target = key++;
+  const messageClass = classNames(`${prefixCls}-custom-content`, {
+    [`${prefixCls}-${args.type}`]: args.type,
+    [`${prefixCls}-rtl`]: rtl === true,
+  });
+
+  const target = args.key || key++;
   const closePromise = new Promise(resolve => {
     const callback = () => {
       if (typeof args.onClose === 'function') {
@@ -75,21 +90,14 @@ function notice(args: ArgsProps): MessageType {
       return resolve(true);
     };
     getMessageInstance(instance => {
-      const iconNode = (
-        <Icon type={iconType} theme={iconType === 'loading' ? 'outlined' : 'filled'} />
-      );
-      const switchIconNode = iconType ? iconNode : '';
       instance.notice({
-        key: args.key || target,
+        key: target,
         duration,
-        style: {},
+        style: args.style || {},
+        className: args.className,
         content: (
-          <div
-            className={`${prefixCls}-custom-content${
-              args.type ? ` ${prefixCls}-${args.type}` : ''
-            }`}
-          >
-            {args.icon ? args.icon : switchIconNode}
+          <div className={messageClass}>
+            {args.icon || (IconComponent && <IconComponent />)}
             <span>{args.content}</span>
           </div>
         ),
@@ -114,7 +122,10 @@ type JointContent = ConfigContent | ArgsProps;
 export type ConfigOnClose = () => void;
 
 function isArgsProps(content: JointContent): content is ArgsProps {
-  return typeof content === 'object' && !!(content as ArgsProps).content;
+  return (
+    Object.prototype.toString.call(content) === '[object Object]' &&
+    !!(content as ArgsProps).content
+  );
 }
 
 export interface ConfigOptions {
@@ -124,6 +135,7 @@ export interface ConfigOptions {
   getContainer?: () => HTMLElement;
   transitionName?: string;
   maxCount?: number;
+  rtl?: boolean;
 }
 
 const api: any = {
@@ -149,6 +161,9 @@ const api: any = {
     if (options.maxCount !== undefined) {
       maxCount = options.maxCount;
       messageInstance = null;
+    }
+    if (options.rtl !== undefined) {
+      rtl = options.rtl;
     }
   },
   destroy() {
